@@ -76,3 +76,20 @@ Contributions are welcome! If you have suggestions for improvements or encounter
 ## **License**
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## To Do
+
+- [ ] Store canister eth address in state
+- [ ] Add more evm rpc urls
+- [ ] Add function for sending signed transaction
+- [ ] Add token functions for mint and burn
+- [ ] Refactor
+- [ ] Store new rpc url’s in state
+- [ ] Add spawn timer for getting changes on evm contract
+- [ ] Add function to get latest changes on contract
+- [ ] Store processed (cross chain transferred data unique hashes) datas in state
+- [ ] Add cross chain token transfer mechanism with mint&burn approach
+- [ ] Allow DAO structure to fund the canister for sending transactions so that dao investors can get fee from each operation
+- [ ] Refactor error handling
+- [ ] Improve security (currently uses owners principal but can be considered different approaches)
+- [ ] Frontend implementation
