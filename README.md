@@ -1,61 +1,78 @@
-# evm_bridge_canister
+# **EVM Bridge Canister for Internet Computer**
 
-Welcome to your new evm_bridge_canister project and to the internet computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+Welcome to the EVM Bridge Canister project, a cutting-edge solution designed to seamlessly integrate Ethereum Virtual Machine (EVM) functionalities with the Internet Computer Protocol (ICP). This project leverages the capabilities of the EVM RPC Canister, enabling developers to interact with EVM-based networks directly from the Internet Computer.
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+Project currently includes only POC functions like signing raw transaction or getting data from contract using rpc. You can see TODO below.
 
-To learn more before you start working with evm_bridge_canister, see the following documentation available online:
+## **Features**
 
-- [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
-- [SDK Developer Tools](https://internetcomputer.org/docs/current/developer-docs/setup/install)
-- [Rust Canister Development Guide](https://internetcomputer.org/docs/current/developer-docs/backend/rust/)
-- [ic-cdk](https://docs.rs/ic-cdk)
-- [ic-cdk-macros](https://docs.rs/ic-cdk-macros)
-- [Candid Introduction](https://internetcomputer.org/docs/current/developer-docs/backend/candid/)
+- **EVM Interaction**: Perform essential EVM operations, such as retrieving gas prices and signing example transactions.
+- **EVM RPC Canister Integration**: Utilize the newly announced [EVM RPC Canister](https://github.com/internet-computer-protocol/evm-rpc-canister) to facilitate communication with EVM networks.
+- **Customizable and Expandable**: Easily extend the canister's functionalities to suit your specific needs.
+- **Sign EVM Transactions: Project uses [ic-evm-sign](https://github.com/nikolas-con/ic-evm-sign/tree/master)** crates codes but updated for current ic-cdk and candid crates. In original repo versions are ic-cdk = “0.5.2” and candid=”0.7.14” but this projects uses lates improvements like sign_with_ecdsa function under management canister. Repo maintained for this project and updated version is not public for now.
 
-If you want to start working on your project right away, you might want to try the following commands:
+## **Getting Started**
+
+Before diving into the project, ensure you have the necessary tools installed on your system. This project requires the DFINITY Canister SDK (dfx) and Rust.
+
+### **Prerequisites**
+
+- DFINITY Canister SDK
+- Rust
+- Node.js (for managing frontend interactions, if applicable)
+
+### **Installation**
+
+1. Clone the repository to your local machine.
+2. Navigate into the project directory:
+
+   ```bash
+   cd evm_bridge_canister/
+   ```
+
+3. Install the required dependencies:
+
+   ```bash
+   dfx deploy evm_rpc --argument '(record { nodesInSubnet = 28 })'
+   dfx deploy evm_bridge_canister_backend --argument '("https://polygon-mumbai-pokt.nodies.app")'
+   ```
+
+## **Usage**
+
+The EVM Bridge Canister allows you to perform various operations with ease. Here are some of the key functionalities:
+
+- **Get Gas Price**: Retrieve the current gas price from the specified EVM network. (Using RPC url)
+- **Create Address for Owner**: Generate a new address for the canister owner. This should be called once
+- **Get Canister Address**: Obtain the address associated with the canister.
+- **Sign Example Transaction**: Sign a sample transaction for demonstration purposes.
+- **Interact with EVM Contracts**: Send RPC requests to interact with contracts deployed on EVM-compatible networks.
+- **Get Data From Contract** : Get’s contract data using evm_rpc canister. Contract example is included under contract folder. Expects the contract address and principal of evm_rpc
+
+## **Development**
+
+To start local development:
 
 ```bash
-cd evm_bridge_canister/
-dfx help
-dfx canister --help
-```
-
-## Running the project locally
-
-If you want to test your project locally, you can use the following commands:
-
-```bash
-# Starts the replica, running in the background
+# Start the local replica
 dfx start --background
 
-# Deploys your canisters to the replica and generates your candid interface
-dfx deploy
+# Deploy your canisters to the local replica
+dfx deploy evm_rpc --argument '(record { nodesInSubnet = 28 })'
+dfx deploy evm_bridge_canister_backend --argument '("https://polygon-mumbai-pokt.nodies.app")'
 ```
 
-Once the job completes, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
+### **Testing**
 
-If you have made changes to your backend canister, you can generate a new candid interface with
+Tests will be implemented
 
-```bash
-npm run generate
-```
+## **Deployment**
 
-at any time. This is recommended before starting the frontend development server, and will be run automatically any time you run `dfx deploy`.
+To deploy your canister to the Internet Computer, follow the standard **`dfx`** deployment process. Ensure you have configured your **`dfx.json`** file with the appropriate network settings.
 
-If you are making frontend changes, you can start a development server with
+## **Contributing**
 
-```bash
-npm start
-```
+Contributions are welcome! If you have suggestions for improvements or encounter any issues, please open an issue or submit a pull request.
 
-Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
+## **License**
 
-### Note on frontend environment variables
-
-If you are hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project does not fetch the root key in production:
-
-- set`DFX_NETWORK` to `ic` if you are using Webpack
-- use your own preferred method to replace `process.env.DFX_NETWORK` in the autogenerated declarations
-  - Setting `canisters -> {asset_canister_id} -> declarations -> env_override to a string` in `dfx.json` will replace `process.env.DFX_NETWORK` with the string in the autogenerated declarations
-- Write your own `createActor` constructor
+This project is licensed under the MIT License - see the LICENSE file for details.
