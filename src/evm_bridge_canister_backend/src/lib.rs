@@ -8,6 +8,7 @@ pub mod utils;
 // use ic_cdk::api::call::{call, CallResult};
 use cketh_common::eth_rpc::ProviderError;
 use cketh_common::eth_rpc::RpcError;
+use cketh_common::eth_rpc_client::providers::RpcApi;
 use cketh_common::eth_rpc_client::providers::RpcService;
 use state::STATE;
 #[ic_cdk::init]
@@ -23,7 +24,10 @@ async fn init() {
 #[ic_cdk::update]
 pub async fn get_gas_price(evm_rpc: String) -> String {
     let params = (
-        &RpcService::Chain(1), // Ethereum mainnet
+        &RpcService::Custom(RpcApi {
+            url: "https://polygon-mumbai-pokt.nodies.app".to_string(),
+            headers: None,
+        }), // Ethereum mainnet
         "{\"jsonrpc\":\"2.0\",\"method\":\"eth_gasPrice\",\"params\":null,\"id\":1}".to_string(),
         1000 as u64,
     );
