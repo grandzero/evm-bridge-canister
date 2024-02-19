@@ -5,19 +5,6 @@
       "package": "evm_bridge_canister_backend",
       "type": "rust"
     },
-    "evm_bridge_canister_frontend": {
-      "dependencies": [
-        "evm_bridge_canister_backend"
-      ],
-      "frontend": {
-        "entrypoint": "src/evm_bridge_canister_frontend/src/index.html"
-      },
-      "source": [
-        "src/evm_bridge_canister_frontend/assets",
-        "dist/evm_bridge_canister_frontend/"
-      ],
-      "type": "assets"
-    },
     "evm_rpc": {
       "type": "custom",
       "candid": "https://github.com/internet-computer-protocol/evm-rpc-canister/releases/latest/download/evm_rpc.did",

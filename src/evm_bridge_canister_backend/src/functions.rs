@@ -164,22 +164,37 @@ pub async fn sign_transaction(
 
 pub async fn sign_custom_tx(data: String) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
-    let tx = transaction::Transaction1559 {
+    // let tx = transaction::Transaction1559 {
+    //     chain_id: 1,
+    //     nonce: 0,
+    //     max_priority_fee_per_gas: U256::from(13),
+    //     gas_limit: 1000000,
+    //     max_fee_per_gas: U256::from(5),
+    //     to: "0xFD23c55fc75e1eaAdBB5493639C84b54B331A396".to_owned(),
+    //     value: U256::from(1),
+    //     access_list: vec![],
+    //     data: data.clone(),
+    //     v: "0x00".to_string(),
+    //     r: "0x00".to_string(),
+    //     s: "0x00".to_string(),
+    // };
+
+    let legacy = transaction::TransactionLegacy {
         chain_id: 1,
         nonce: 0,
-        max_priority_fee_per_gas: U256::from(13),
+        gas_price: U256::from(5),
         gas_limit: 1000000,
-        max_fee_per_gas: U256::from(5),
         to: "0xFD23c55fc75e1eaAdBB5493639C84b54B331A396".to_owned(),
         value: U256::from(1),
-        access_list: vec![],
         data,
         v: "0x00".to_string(),
         r: "0x00".to_string(),
         s: "0x00".to_string(),
     };
 
-    let raw_tx = tx.serialize().unwrap();
+    let raw_tx = legacy.serialize().unwrap();
+
+    // let raw_tx = tx.serialize().unwrap();
     let res = sign_transaction(raw_tx, 1, Principal::from_text(state.owner).unwrap()).await;
     return res;
 }

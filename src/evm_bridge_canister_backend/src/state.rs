@@ -70,6 +70,7 @@ pub struct Config {
     pub env: Environment,
     pub key_name: String,
     pub sign_cycles: u64,
+    pub rpc_url: String,
 }
 
 impl Default for Config {
@@ -85,18 +86,21 @@ impl From<Environment> for Config {
                 env: Environment::Staging,
                 key_name: "test_key_1".to_string(),
                 sign_cycles: 10_000_000_000,
+                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
             }
         } else if env == Environment::Production {
             Self {
                 env: Environment::Production,
                 key_name: "key_1".to_string(),
                 sign_cycles: 26_153_846_153,
+                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
             }
         } else {
             Self {
                 env: Environment::Development,
                 key_name: "dfx_test_key".to_string(),
                 sign_cycles: 0,
+                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
             }
         }
     }

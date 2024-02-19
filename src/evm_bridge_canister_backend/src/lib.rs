@@ -1,13 +1,15 @@
 use candid::Principal;
+
 pub mod ecdsa;
 pub mod functions;
 pub mod state;
 pub mod transaction;
 pub mod utils;
-use primitive_types::U256;
 // use ic_cdk::api::call::{call, CallResult};
+use cketh_common::eth_rpc::ProviderError;
+use cketh_common::eth_rpc::RpcError;
+use cketh_common::eth_rpc_client::providers::RpcService;
 use state::STATE;
-
 #[ic_cdk::init]
 async fn init() {
     STATE.with(|s| {
@@ -16,6 +18,54 @@ async fn init() {
     });
     // let _addr =
     //     functions::create_address(Principal::from_text(ic_cdk::caller().to_text()).unwrap()).await;
+}
+
+#[ic_cdk::update]
+pub async fn get_gas_price(evm_rpc: String) -> String {
+    let params = (
+        &RpcService::Chain(1), // Ethereum mainnet
+        "{\"jsonrpc\":\"2.0\",\"method\":\"eth_gasPrice\",\"params\":null,\"id\":1}".to_string(),
+        1000 as u64,
+    );
+    // let canister_principal = Principal::from_text("br5f7-7uaaa-aaaaa-qaaca-cai").unwrap();
+    let evm_rpc = candid::types::principal::Principal::from_text(evm_rpc).unwrap();
+    let (cycles_result,): (Result<u128, RpcError>,) =
+        ic_cdk::api::call::call(evm_rpc, "requestCost", params.clone())
+            .await
+            .unwrap();
+    let cycles = cycles_result
+        .unwrap_or_else(|e| ic_cdk::trap(&format!("error in `request_cost`: {:?}", e)));
+
+    // Call without sending cycles
+    let (result_without_cycles,): (Result<String, RpcError>,) =
+        ic_cdk::api::call::call(evm_rpc, "request", params.clone())
+            .await
+            .unwrap();
+    match result_without_cycles {
+        Ok(s) => ic_cdk::trap(&format!("response from `request` without cycles: {:?}", s)),
+        Err(RpcError::ProviderError(ProviderError::TooFewCycles { expected, .. })) => {
+            assert_eq!(expected, cycles)
+        }
+        Err(err) => ic_cdk::trap(&format!("error in `request` without cycles: {:?}", err)),
+    }
+
+    // Call with expected number of cycles
+    let (result,): (Result<String, RpcError>,) =
+        ic_cdk::api::call::call_with_payment128(evm_rpc, "request", params, cycles)
+            .await
+            .unwrap();
+    match result {
+        Ok(response) => {
+            // Check response structure around gas price
+            // assert_eq!(
+            //     &response[..36],
+            //     "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":\"0x"
+            // );
+            // assert_eq!(&response[response.len() - 2..], "\"}");
+            return response.to_string();
+        }
+        Err(err) => ic_cdk::trap(&format!("error in `request` with cycles: {:?}", err)),
+    }
 }
 
 #[ic_cdk::update]
@@ -30,6 +80,8 @@ async fn greet(_name: String) -> String {
     if let Ok(res) = addr {
         return res.address;
     }
+    // let (first_result, second_result): (first_result_type, second_result_type) =
+    //     ic_cdkapi::call::call(canister_id, "method", (first_arg, second_arg)).await?;
 
     return "Error".to_owned();
 }

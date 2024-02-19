@@ -2,4 +2,5 @@ service : () -> {
     "greet": (text) -> (text);
     "get_canister_address" : () -> (text);
     "sign_example_tx": () -> (text);
+    "get_gas_price": (text) -> (text);
 }
