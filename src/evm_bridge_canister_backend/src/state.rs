@@ -71,6 +71,8 @@ pub struct Config {
     pub key_name: String,
     pub sign_cycles: u64,
     pub rpc_url: String,
+    pub owner: Principal,
+    pub public_key_str: String,
 }
 
 impl Default for Config {
@@ -87,6 +89,8 @@ impl From<Environment> for Config {
                 key_name: "test_key_1".to_string(),
                 sign_cycles: 10_000_000_000,
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                owner: Principal::anonymous(),
+                public_key_str: "".to_string(),
             }
         } else if env == Environment::Production {
             Self {
@@ -94,6 +98,8 @@ impl From<Environment> for Config {
                 key_name: "key_1".to_string(),
                 sign_cycles: 26_153_846_153,
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                owner: Principal::anonymous(),
+                public_key_str: "".to_string(),
             }
         } else {
             Self {
@@ -101,6 +107,8 @@ impl From<Environment> for Config {
                 key_name: "dfx_test_key".to_string(),
                 sign_cycles: 0,
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                owner: Principal::anonymous(),
+                public_key_str: "".to_string(),
             }
         }
     }
@@ -110,7 +118,6 @@ impl From<Environment> for Config {
 pub struct State {
     pub users: HashMap<Principal, UserData>,
     pub config: Config,
-    pub owner: String,
 }
 
 impl Storable for State {

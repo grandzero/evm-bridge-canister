@@ -1,6 +1,7 @@
-service : () -> {
-    "greet": (text) -> (text);
+service : (text) -> {
+    "create_adress_for_owner": () -> (text);
     "get_canister_address" : () -> (text);
     "sign_example_tx": () -> (text);
     "get_gas_price": (text) -> (text);
+    "get_data_from_contract": (text, text) -> (text);
 }

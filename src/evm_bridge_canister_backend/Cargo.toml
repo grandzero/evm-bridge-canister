@@ -20,5 +20,8 @@ futures = "0.3.25"
 ic-stable-structures = "0.6.2"
 cketh-common = { git = "https://github.com/dfinity/ic", rev = "8511846fb6352a0a4f9abae1a8fc8569aeba5f10", package = "ic-cketh-minter" }
 getrandom = { version = "0.2", features = ["custom"] }
+ethers-core = "2.0.13"
+serde_json = "1.0.113"
+hex = "0.4.3"
 [dev-dependencies]
 libsecp256k1_test = { version = "0.5.0", package = "libsecp256k1" }

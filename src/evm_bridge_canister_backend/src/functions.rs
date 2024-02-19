@@ -195,7 +195,7 @@ pub async fn sign_custom_tx(data: String) -> Result<SignTransactionResponse, Str
     let raw_tx = legacy.serialize().unwrap();
 
     // let raw_tx = tx.serialize().unwrap();
-    let res = sign_transaction(raw_tx, 1, Principal::from_text(state.owner).unwrap()).await;
+    let res = sign_transaction(raw_tx, 1, state.config.owner).await;
     return res;
 }
 
