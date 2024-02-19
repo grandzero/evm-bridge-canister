@@ -1,0 +1,4 @@
+[workspace]
+members = [
+    "src/evm_bridge_canister_backend",
+]
