@@ -112,3 +112,11 @@ pub async fn get_data(_contract_address: String, index: u64) -> Result<Vec<u8>, 
     .await;
     return result;
 }
+
+pub async fn prepare_data_to_sign(message: String) -> Result<Vec<u8>, String> {
+    let abi = Rc::new(include_abi!("icp_contract.json"));
+    // let owner_address =
+    //     ethers_core::types::Address::from_str(&receiver_address).expect("Invalid owner address");
+    let result = prepare_data(&abi, "sendMessage", &[Token::String(message)]).await;
+    return result;
+}

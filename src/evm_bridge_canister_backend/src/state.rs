@@ -73,6 +73,8 @@ pub struct Config {
     pub rpc_url: String,
     pub owner: Principal,
     pub public_key_str: String,
+    pub rpc_canister: Principal,
+    pub owner_public_key: Vec<u8>,
 }
 
 impl Default for Config {
@@ -91,6 +93,8 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
+                rpc_canister: Principal::anonymous(),
+                owner_public_key: vec![],
             }
         } else if env == Environment::Production {
             Self {
@@ -100,6 +104,8 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
+                rpc_canister: Principal::anonymous(),
+                owner_public_key: vec![],
             }
         } else {
             Self {
@@ -109,6 +115,8 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
+                rpc_canister: Principal::anonymous(),
+                owner_public_key: vec![],
             }
         }
     }
@@ -118,6 +126,7 @@ impl From<Environment> for Config {
 pub struct State {
     pub users: HashMap<Principal, UserData>,
     pub config: Config,
+    pub nonce: u64,
 }
 
 impl Storable for State {

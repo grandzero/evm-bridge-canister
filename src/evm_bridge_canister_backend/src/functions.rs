@@ -1,10 +1,13 @@
-use crate::utils;
+use std::str::FromStr;
+
+use crate::{eth_rpc_data, utils};
 use candid::{CandidType, Deserialize, Principal};
 use ic_cdk::api::management_canister::ecdsa::{
     ecdsa_public_key, EcdsaKeyId, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse,
     SignWithEcdsaResponse,
 };
 use ic_cdk::api::management_canister::ecdsa::{EcdsaCurve, SignWithEcdsaArgument};
+use ic_stable_structures::Storable;
 use primitive_types::U256;
 use serde::Serialize;
 
@@ -104,7 +107,7 @@ pub async fn sign_transaction(
     chain_id: u64,
     principal_id: Principal,
 ) -> Result<SignTransactionResponse, String> {
-    let state = STATE.with(|s| s.borrow().clone());
+    let mut state = STATE.with(|s| s.borrow_mut().clone());
     let user;
 
     if let Some(i) = state.users.get(&principal_id) {
@@ -117,7 +120,7 @@ pub async fn sign_transaction(
 
     let message = tx.get_message_to_sign().unwrap();
 
-    assert!(message.len() == 32);
+    // assert!(message.len() == 32);
 
     let key_id = EcdsaKeyId {
         curve: EcdsaCurve::Secp256k1,
@@ -126,66 +129,45 @@ pub async fn sign_transaction(
 
     let caller = get_derivation_path(principal_id);
 
+    // user.public_key = res.public_key.clone();
     let request = SignWithEcdsaArgument {
         message_hash: message.clone(),
         derivation_path: vec![caller],
         key_id: key_id.clone(),
     };
 
+    let public_key = get_address_from_public_key(user.public_key.clone()).unwrap();
     let (res,): (SignWithEcdsaResponse,) =
         ic_cdk::api::management_canister::ecdsa::sign_with_ecdsa(request)
             .await
             .map_err(|e| format!("Failed to call sign_with_ecdsa {}", e.1))?;
-
+    ic_cdk::println!("User public key : {:?}", user.public_key.clone());
+    ic_cdk::println!(
+        "Canister public key :  {:?}",
+        state.config.public_key_str.to_bytes()
+    );
+    ic_cdk::println!("public key : {:?}", public_key);
+    ic_cdk::println!(
+        "hex version : {:?}",
+        eth_rpc_data::to_hex(&user.public_key.clone()),
+    );
     let signed_tx = tx.sign(res.signature.clone(), user.public_key).unwrap();
-
-    STATE.with(|s| {
-        let mut state = s.borrow_mut();
-        let user = state.users.get_mut(&principal_id).unwrap();
-
-        let mut transaction = Transaction::default();
-        transaction.data = signed_tx.clone();
-        transaction.timestamp = ic_cdk::api::time();
-
-        if let Some(user_tx) = user.transactions.get_mut(&chain_id) {
-            user_tx.transactions.push(transaction);
-            user_tx.nonce = tx.get_nonce().unwrap() + 1;
-        } else {
-            let mut chain_data = TransactionChainData::default();
-            chain_data.nonce = tx.get_nonce().unwrap() + 1;
-            chain_data.transactions.push(transaction);
-
-            user.transactions.insert(chain_id, chain_data);
-        }
-    });
-
-    Ok(SignTransactionResponse { sign_tx: signed_tx })
+    state.nonce = state.nonce + 1;
+    return Ok(SignTransactionResponse { sign_tx: signed_tx });
+    // Ok(SignTransactionResponse { sign_tx: signed_tx })
 }
 
-pub async fn sign_custom_tx(data: String) -> Result<SignTransactionResponse, String> {
+pub async fn sign_custom_tx(data: String, nonce: u64) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
-    // let tx = transaction::Transaction1559 {
-    //     chain_id: 1,
-    //     nonce: 0,
-    //     max_priority_fee_per_gas: U256::from(13),
-    //     gas_limit: 1000000,
-    //     max_fee_per_gas: U256::from(5),
-    //     to: "0xFD23c55fc75e1eaAdBB5493639C84b54B331A396".to_owned(),
-    //     value: U256::from(1),
-    //     access_list: vec![],
-    //     data: data.clone(),
-    //     v: "0x00".to_string(),
-    //     r: "0x00".to_string(),
-    //     s: "0x00".to_string(),
-    // };
-
+    let gas_price = U256::from_dec_str("2500000000").unwrap();
+    ic_cdk::println!("Gas price : {}", gas_price);
     let legacy = transaction::TransactionLegacy {
-        chain_id: 1,
-        nonce: 0,
-        gas_price: U256::from(5),
+        chain_id: 80001,
+        nonce: nonce + 2,
+        gas_price: gas_price,
         gas_limit: 1000000,
-        to: "0xFD23c55fc75e1eaAdBB5493639C84b54B331A396".to_owned(),
-        value: U256::from(1),
+        to: "0xa79770AF41d9C25F654572e6eF53449366598b00".to_owned(),
+        value: U256::from(0),
         data,
         v: "0x00".to_string(),
         r: "0x00".to_string(),
@@ -195,7 +177,7 @@ pub async fn sign_custom_tx(data: String) -> Result<SignTransactionResponse, Str
     let raw_tx = legacy.serialize().unwrap();
 
     // let raw_tx = tx.serialize().unwrap();
-    let res = sign_transaction(raw_tx, 1, state.config.owner).await;
+    let res = sign_transaction(raw_tx, 80001, state.config.owner).await;
     return res;
 }
 

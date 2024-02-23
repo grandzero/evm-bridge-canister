@@ -79,7 +79,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## To Do
 
-- [ ] Store canister eth address in state
+- [x] Store canister eth address in state
 - [ ] Add more evm rpc urls
 - [ ] Add function for sending signed transaction
 - [ ] Add token functions for mint and burn
