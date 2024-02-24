@@ -236,14 +236,21 @@ async fn send_view_rpc_request(
 
 #[ic_cdk::update]
 async fn send_transaction(chain: ChainSelection, message: Vec<u8>) -> Result<String, String> {
-    let mut state = STATE.with(|s| s.borrow_mut().clone());
+    let state = STATE.with(|s| s.borrow_mut().clone());
     let chain_id = match chain {
         ChainSelection::Mumbai => {
-            state.nonce.mumbai_nonce += 1;
+            STATE.with(|s| {
+                let mut st = s.borrow_mut().clone();
+                st.nonce.mumbai_nonce += 1
+            });
+
             80001
         }
         ChainSelection::Binance => {
-            state.nonce.binance_nonce += 1;
+            STATE.with(|s| {
+                let mut st = s.borrow_mut().clone();
+                st.nonce.binance_nonce += 1
+            });
             97
         }
     };
