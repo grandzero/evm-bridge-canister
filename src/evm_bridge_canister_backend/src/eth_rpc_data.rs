@@ -1,14 +1,18 @@
 use ethers_core::abi::{Contract, FunctionExt, Token};
 use hex;
+use hex::FromHexError;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::{rc::Rc, str::FromStr};
-
 const HTTP_CYCLES: u128 = 100_000_000;
 const MAX_RESPONSE_BYTES: u64 = 2048;
 
 pub fn to_hex(data: &[u8]) -> String {
     format!("0x{}", hex::encode(data))
+}
+
+pub fn from_hex(data: &str) -> Result<Vec<u8>, FromHexError> {
+    hex::decode(&data[2..])
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -50,18 +54,6 @@ struct JsonRpcResult {
 struct JsonRpcError {
     code: isize,
     message: String,
-}
-
-fn next_id() -> u64 {
-    thread_local! {
-        static NEXT_ID: RefCell<u64> = RefCell::default();
-    }
-    NEXT_ID.with(|next_id| {
-        let mut next_id = next_id.borrow_mut();
-        let id = *next_id;
-        *next_id = next_id.wrapping_add(1);
-        id
-    })
 }
 
 pub async fn prepare_data(

@@ -7,7 +7,7 @@
 				"type": "bytes"
 			}
 		],
-		"name": "icp_call",
+		"name": "icpCall",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -25,14 +25,28 @@
 				"type": "string"
 			}
 		],
-		"name": "send_message",
+		"name": "sendMessage",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "get_incoming",
+		"stateMutability": "nonpayable",
+		"type": "fallback"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_index",
+				"type": "uint256"
+			}
+		],
+		"name": "getIncoming",
 		"outputs": [
 			{
 				"internalType": "bytes",
@@ -44,8 +58,14 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "get_message",
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_index",
+				"type": "uint256"
+			}
+		],
+		"name": "getMessage",
 		"outputs": [
 			{
 				"internalType": "bytes",

@@ -85,6 +85,8 @@ pub struct Config {
     pub rpc_canister: String,
     pub owner_public_key: Vec<u8>,
     pub rpc_endpoints: Vec<RPCEndpoints>,
+    pub mumbai_contract: String,
+    pub binance_contract: String, // TODO: Create new struct for all evm networks and it should store a list with all necessary data
 }
 
 impl Default for Config {
@@ -100,63 +102,69 @@ impl From<Environment> for Config {
                 env: Environment::Staging,
                 key_name: "test_key_1".to_string(),
                 sign_cycles: 10_000_000_000,
-                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                rpc_url: "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
                 rpc_canister: "".to_string(),
                 owner_public_key: vec![],
                 rpc_endpoints: vec![
                     RPCEndpoints {
-                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_url: "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_owned(),
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
+                mumbai_contract: "0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97".to_string(),
+                binance_contract: "0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817".to_string(),
             }
         } else if env == Environment::Production {
             Self {
                 env: Environment::Production,
                 key_name: "key_1".to_string(),
                 sign_cycles: 26_153_846_153,
-                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                rpc_url: "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
                 rpc_canister: "".to_string(),
                 owner_public_key: vec![],
                 rpc_endpoints: vec![
                     RPCEndpoints {
-                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_url: "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_owned(),
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
+                mumbai_contract: "0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97".to_string(),
+                binance_contract: "0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817".to_string(),
             }
         } else {
             Self {
                 env: Environment::Development,
                 key_name: "dfx_test_key".to_string(),
                 sign_cycles: 0,
-                rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                rpc_url: "https://data-seed-prebsc-1-s1.binance.org:8545/".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
                 rpc_canister: "".to_string(),
                 owner_public_key: vec![],
                 rpc_endpoints: vec![
                     RPCEndpoints {
-                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_url: "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_owned(),
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
+                mumbai_contract: "0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97".to_string(),
+                binance_contract: "0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817".to_string(),
             }
         }
     }
