@@ -176,12 +176,27 @@ pub struct RPCEndpoints {
     pub rpc_name: String,
 }
 
+#[derive(CandidType, Deserialize, Debug, Clone)]
+pub struct WalletValues {
+    pub binance_nonce: u64,
+    pub mumbai_nonce: u64,
+}
+
+impl Default for WalletValues {
+    fn default() -> Self {
+        WalletValues {
+            binance_nonce: 0,
+            mumbai_nonce: 0,
+        }
+    }
+}
+
 pub type RPCEndpointList = Vec<RPCEndpoints>;
 #[derive(Default, CandidType, Deserialize, Debug, Clone)]
 pub struct State {
     pub users: HashMap<Principal, UserData>,
     pub config: Config,
-    pub nonce: u64,
+    pub nonce: WalletValues,
 }
 
 impl Storable for State {

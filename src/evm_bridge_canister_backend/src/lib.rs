@@ -163,7 +163,7 @@ async fn send_transaction_from_rpc(
         data, // Ethereum mainnet
         1000 as u64,
     );
-
+    // return "Success".to_owned();
     let evm_rpc = candid::Principal::from_text(evm_rpc).unwrap();
     let (cycles_result,): (Result<u128, RpcError>,) =
         ic_cdk::api::call::call(evm_rpc, "requestCost", params.clone())
@@ -191,6 +191,7 @@ async fn send_view_rpc_request(
     chain: ChainSelection,
 ) -> String {
     // let state = STATE.with(|s| s.borrow().clone());
+    ic_cdk::println!("Data in rpc is : {}", data);
     let state = STATE.with(|s| s.borrow().clone());
     ic_cdk::println!("EVM RPC is : {}", state.config.rpc_canister);
     let evm_rpc =
@@ -237,8 +238,14 @@ async fn send_view_rpc_request(
 async fn send_transaction(chain: ChainSelection, message: Vec<u8>) -> Result<String, String> {
     let mut state = STATE.with(|s| s.borrow_mut().clone());
     let chain_id = match chain {
-        ChainSelection::Mumbai => 80001,
-        ChainSelection::Binance => 97,
+        ChainSelection::Mumbai => {
+            state.nonce.mumbai_nonce += 1;
+            80001
+        }
+        ChainSelection::Binance => {
+            state.nonce.binance_nonce += 1;
+            97
+        }
     };
     let data_to_sign = eth_rpc_data::get_data_with_arguments("icpCall", &[Token::Bytes(message)])
         .await
@@ -248,13 +255,11 @@ async fn send_transaction(chain: ChainSelection, message: Vec<u8>) -> Result<Str
         eth_rpc_data::to_hex(&data_to_sign)
     );
     let signed_tx = functions::sign_custom_tx(eth_rpc_data::to_hex(&data_to_sign), chain_id).await;
-    let tx_result = send_transaction_from_rpc(
-        eth_rpc_data::to_hex(&signed_tx.unwrap().sign_tx),
-        chain,
-        state.config.rpc_canister,
-    )
-    .await;
-    state.nonce = state.nonce + 1;
+    // ic_cdk::println!("Signed tx is : {:?}", signed_tx.unwra.clone());
+    let data = eth_rpc_data::to_hex(&signed_tx.unwrap().sign_tx);
+    ic_cdk::println!("Data is : {:?}", data.clone());
+    let tx_result = send_transaction_from_rpc(data, chain, state.config.rpc_canister).await;
+
     return Ok(tx_result);
 }
 
@@ -287,18 +292,17 @@ async fn read_binance_write_mumbai(contract_address: String) -> Result<String, S
     return Ok(tx_result);
 }
 
-// #[ic_cdk::update]
-// async fn read_mumbai_write_binance(contract_address: String) -> Result<String, String> {
-//     let data_in_mumbai = get_data_from_source(ChainSelection::Mumbai, contract_address.clone())
-//         .await
-//         .map_err(|e| format!("Could not get any data from mumbai"))?;
-//     let data_result = &data_in_mumbai[34..&data_in_mumbai.len() - 2];
-//     let vector_data =
-//         eth_rpc_data::from_hex(data_result).map_err(|e| format!("Error in from_hex: {:?}", e))?;
-//     let tx_result = send_transaction(ChainSelection::Binance, vector_data)
-//         .await
-//         .map_err(|e| format!("Error in send_transaction: {:?}", e))?;
+#[ic_cdk::update]
+async fn read_mumbai_write_binance(contract_address: String) -> Result<String, String> {
+    let data_in_mumbai = get_data_from_source(ChainSelection::Mumbai, contract_address.clone())
+        .await
+        .map_err(|e| format!("Could not get any data from mumbai"))?;
+    let data_result = &data_in_mumbai[34..&data_in_mumbai.len() - 2];
+    let vector_data =
+        eth_rpc_data::from_hex(data_result).map_err(|e| format!("Error in from_hex: {:?}", e))?;
+    let tx_result = send_transaction(ChainSelection::Binance, vector_data)
+        .await
+        .map_err(|e| format!("Error in send_transaction: {:?}", e))?;
 
-//     return Ok(tx_result);
-// }
-//https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C
+    return Ok(tx_result);
+}

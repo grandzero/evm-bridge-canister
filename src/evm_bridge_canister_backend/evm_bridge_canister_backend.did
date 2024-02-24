@@ -22,7 +22,7 @@ service : (RPCEndpointList, text) -> {
     "send_view_rpc_request": (text, ChainSelection, text) -> (text);
     "send_transaction" : (text, ChainSelection, blob) -> (Result); 
     "get_data_from_source": (ChainSelection, text) -> (Result);
-
+    "read_mumbai_write_binance" : (text) -> (Result);
     "read_binance_write_mumbai" : (text) -> (Result);
     
 }

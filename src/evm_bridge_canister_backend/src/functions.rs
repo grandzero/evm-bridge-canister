@@ -149,7 +149,7 @@ pub async fn sign_custom_tx(
     chain_id: u64,
 ) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
-    let nonce = state.nonce; // TODO: Store nonce for each network and use accordingly
+    // let nonce = state.nonce; // TODO: Store nonce for each network and use accordingly
     let gas_price = U256::from_dec_str("10000000000").unwrap(); // TODO: Use actual gas price from rpc
     let contract_address = match chain_id {
         80001 => state.config.mumbai_contract.clone(),
@@ -160,7 +160,11 @@ pub async fn sign_custom_tx(
     ic_cdk::println!("chain_id: {}", chain_id);
     let legacy = transaction::TransactionLegacy {
         chain_id,
-        nonce: nonce + 3, // TODO: Use actual nonce
+        nonce: match chain_id {
+            80001 => state.nonce.mumbai_nonce,
+            97 => state.nonce.binance_nonce,
+            _ => state.nonce.binance_nonce,
+        }, // TODO: Use actual nonce
         gas_price: gas_price,
         gas_limit: 1000000,
         to: contract_address,
