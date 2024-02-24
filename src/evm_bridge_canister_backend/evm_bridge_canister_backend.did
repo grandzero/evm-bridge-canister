@@ -1,8 +1,19 @@
-service : (text, text) -> {
+type RPCEndpoints = record {
+    rpc_url: text;
+    rpc_name: text;
+};
+
+type RPCEndpointList = vec RPCEndpoints;
+type ChainSelection = variant {
+    mumbai;
+    binance;
+}
+service : (RPCEndpointList, text) -> {
     "create_adress_for_owner": () -> (text);
     "get_canister_address" : () -> (text);
     "sign_example_tx": () -> (text);
-    "get_gas_price": (text) -> (text);
-    "get_data_from_contract": (text, text) -> (text);
+    "get_gas_price": () -> (text);
+    "get_data_from_source": (ChainSelection, text) -> (text);
     "send_tx" : () -> (text);
+    "set_rpc_canister": (text) -> (text);
 }

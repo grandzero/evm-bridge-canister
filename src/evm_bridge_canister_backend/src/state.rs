@@ -5,6 +5,15 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::{borrow::Cow, cell::RefCell};
 const MAX_VALUE_SIZE: u32 = 1000000;
+
+#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
+pub enum ChainSelection {
+    #[serde(rename = "mumbai")]
+    Mumbai,
+    #[serde(rename = "binance")]
+    Binance,
+}
+
 #[derive(CandidType, Serialize, Debug, Clone, Deserialize)]
 pub struct Transaction {
     pub data: Vec<u8>,
@@ -73,8 +82,9 @@ pub struct Config {
     pub rpc_url: String,
     pub owner: Principal,
     pub public_key_str: String,
-    pub rpc_canister: Principal,
+    pub rpc_canister: String,
     pub owner_public_key: Vec<u8>,
+    pub rpc_endpoints: Vec<RPCEndpoints>,
 }
 
 impl Default for Config {
@@ -93,8 +103,18 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
-                rpc_canister: Principal::anonymous(),
+                rpc_canister: "".to_string(),
                 owner_public_key: vec![],
+                rpc_endpoints: vec![
+                    RPCEndpoints {
+                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_name: "mumbai".to_owned(),
+                    },
+                    RPCEndpoints {
+                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_name: "binance".to_owned(),
+                    },
+                ],
             }
         } else if env == Environment::Production {
             Self {
@@ -104,8 +124,18 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
-                rpc_canister: Principal::anonymous(),
+                rpc_canister: "".to_string(),
                 owner_public_key: vec![],
+                rpc_endpoints: vec![
+                    RPCEndpoints {
+                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_name: "mumbai".to_owned(),
+                    },
+                    RPCEndpoints {
+                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_name: "binance".to_owned(),
+                    },
+                ],
             }
         } else {
             Self {
@@ -115,13 +145,30 @@ impl From<Environment> for Config {
                 rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
                 owner: Principal::anonymous(),
                 public_key_str: "".to_string(),
-                rpc_canister: Principal::anonymous(),
+                rpc_canister: "".to_string(),
                 owner_public_key: vec![],
+                rpc_endpoints: vec![
+                    RPCEndpoints {
+                        rpc_url: "https://polygon-mumbai-pokt.nodies.app".to_owned(),
+                        rpc_name: "mumbai".to_owned(),
+                    },
+                    RPCEndpoints {
+                        rpc_url: "https://bsc-testnet-rpc.publicnode.com".to_owned(),
+                        rpc_name: "binance".to_owned(),
+                    },
+                ],
             }
         }
     }
 }
 
+#[derive(CandidType, Deserialize, Debug, Clone)]
+pub struct RPCEndpoints {
+    pub rpc_url: String,
+    pub rpc_name: String,
+}
+
+pub type RPCEndpointList = Vec<RPCEndpoints>;
 #[derive(Default, CandidType, Deserialize, Debug, Clone)]
 pub struct State {
     pub users: HashMap<Principal, UserData>,

@@ -100,7 +100,18 @@ macro_rules! include_abi {
     }};
 }
 
-pub async fn get_data(_contract_address: String, index: u64) -> Result<Vec<u8>, String> {
+pub async fn get_data_with_arguments(
+    function_name: &str,
+    args: &[Token],
+) -> Result<Vec<u8>, String> {
+    let abi = Rc::new(include_abi!("icp_contract.json"));
+    // let owner_address =
+    //     ethers_core::types::Address::from_str(&receiver_address).expect("Invalid owner address");
+    let result = prepare_data(&abi, function_name, args).await;
+    return result;
+}
+
+pub async fn get_data(index: u64) -> Result<Vec<u8>, String> {
     let abi = Rc::new(include_abi!("icp_contract.json"));
     // let owner_address =
     //     ethers_core::types::Address::from_str(&receiver_address).expect("Invalid owner address");

@@ -1,0 +1,1 @@
+dfx deploy evm_bridge_canister_backend --argument '(vec {record {rpc_url="https://polygon-mumbai-pokt.nodies.app"; rpc_name="binance"}; record {rpc_url="https://bsc-testnet-rpc.publicnode.com"; rpc_name="binance";}}, "bkyz2-fmaaa-aaaaa-qaaaq-cai")'

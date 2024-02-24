@@ -2,38 +2,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "message",
-				"type": "string"
-			}
-		],
-		"name": "sendMessage",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newCanister",
-				"type": "address"
-			}
-		],
-		"name": "setCanister",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "bytes",
 				"name": "message",
 				"type": "bytes"
 			}
 		],
-		"name": "setIncoming",
+		"name": "icp_call",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -42,22 +16,75 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_canister",
+				"name": "targetAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			}
+		],
+		"name": "send_message",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "get_incoming",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "get_message",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "incomingMessage",
+		"outputs": [
+			{
+				"internalType": "bytes",
+				"name": "",
+				"type": "bytes"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "sender",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
+		"stateMutability": "view",
+		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			}
-		],
-		"name": "getMessage",
+		"inputs": [],
+		"name": "waitingMessage",
 		"outputs": [
 			{
 				"internalType": "bytes",

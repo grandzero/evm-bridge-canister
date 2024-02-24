@@ -1,4 +1,5 @@
-///0x98f37cF2fB4B66Fe7b509F8d09Daa7cc6F5CD6A2
+///0xf8cB17EADBE7626299bd800a3da25B2E19cF4200 => Mumbai
+// 0xC234774FE42F455E6aebCa0a56313A2aa246D1f9 => Binance
 // bd3sg-teaaa-aaaaa-qaaba-cai rpc evm canister
 pub mod ecdsa;
 pub mod eth_rpc_data;
@@ -6,39 +7,58 @@ pub mod functions;
 pub mod state;
 pub mod transaction;
 pub mod utils;
+// use candid::Principal;
 // use ic_cdk::api::call::{call, CallResult};
 use cketh_common::eth_rpc::ProviderError;
 use cketh_common::eth_rpc::RpcError;
 use cketh_common::eth_rpc_client::providers::RpcApi;
 use cketh_common::eth_rpc_client::providers::RpcService;
 
+use state::ChainSelection;
+use state::RPCEndpoints;
 use state::STATE;
 #[ic_cdk::init]
-async fn init(rpc_url: String, rpc_canister: String) {
+async fn init(endpoints: Vec<RPCEndpoints>, rpc_canister: String) {
     STATE.with(|s| {
         let mut state = s.borrow_mut();
         state.config.owner = ic_cdk::caller();
-        state.config.rpc_url = rpc_url;
-        state.config.rpc_canister =
-            candid::types::principal::Principal::from_text(rpc_canister).unwrap();
+        state.config.rpc_url = "https://polygon-mumbai-pokt.nodies.app".to_string();
+        state.config.rpc_endpoints = endpoints;
+        state.config.rpc_canister = rpc_canister;
     });
+
+    //candid::types::principal::Principal::from_text(rpc_canister).unwrap();
+
     // let _addr =
     //     functions::create_address(Principal::from_text(ic_cdk::caller().to_text()).unwrap()).await;
 }
 
 #[ic_cdk::update]
-pub async fn get_gas_price(evm_rpc: String) -> String {
+async fn set_rpc_canister(canister: String) -> String {
+    STATE.with(|s| {
+        let mut state = s.borrow_mut();
+        state.config.rpc_canister = canister;
+    });
+    return "Successfull".to_owned();
+}
+
+#[ic_cdk::update]
+pub async fn get_gas_price() -> String {
+    let state = STATE.with(|s| s.borrow().clone());
+    let evm_rpc =
+        candid::types::principal::Principal::from_text(state.config.rpc_canister).unwrap();
+    let rpc_url = state.config.rpc_url;
+
     let params = (
         &RpcService::Custom(RpcApi {
-            url: "https://polygon-mumbai-pokt.nodies.app".to_string(),
+            url: rpc_url,
             headers: None,
         }), // Ethereum mainnet
-        "{\"jsonrpc\":\"2.0\",\"method\":\"eth_gasPrice\",\"params\":null,\"id\":80001}"
-            .to_string(),
+        "{\"jsonrpc\":\"2.0\",\"method\":\"eth_gasPrice\",\"params\":null,\"id\":1}".to_string(),
         1000 as u64,
     );
     // let canister_principal = Principal::from_text("br5f7-7uaaa-aaaaa-qaaca-cai").unwrap();
-    let evm_rpc = candid::types::principal::Principal::from_text(evm_rpc).unwrap();
+    //let evm_rpc = candid::types::principal::Principal::from_text(evm_rpc).unwrap();
     let (cycles_result,): (Result<u128, RpcError>,) =
         ic_cdk::api::call::call(evm_rpc, "requestCost", params.clone())
             .await
@@ -72,6 +92,8 @@ pub async fn get_gas_price(evm_rpc: String) -> String {
             //     "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":\"0x"
             // );
             // assert_eq!(&response[response.len() - 2..], "\"}");
+            //let _transaction_hash = &response[36..response.len()];
+
             return response.to_string();
         }
         Err(err) => ic_cdk::trap(&format!("error in `request` with cycles: {:?}", err)),
@@ -82,9 +104,9 @@ pub async fn get_gas_price(evm_rpc: String) -> String {
 async fn create_adress_for_owner() -> String {
     let principal_id = ic_cdk::caller();
     let state = STATE.with(|s| s.borrow().clone());
-    if state.config.owner != principal_id {
-        return "Only owner can call".to_string();
-    }
+    // if state.config.owner != principal_id {
+    //     return "Only owner can call".to_string();
+    // }
 
     let addr = functions::create_address(state.config.owner).await;
     if let Ok(res) = addr {
@@ -169,22 +191,31 @@ async fn send_transaction_from_rpc(
     }
 }
 
-async fn send_rpc_request(data: String, contract_address: String, evm_rpc: String) -> String {
+async fn send_view_rpc_request(
+    data: String,
+    contract_address: String,
+    chain: ChainSelection,
+) -> String {
     // let state = STATE.with(|s| s.borrow().clone());
-    ic_cdk::println!("Data is : {}", data);
-    ic_cdk::println!("Contract address is : {}", contract_address);
-    ic_cdk::println!("EVM RPC is : {}", evm_rpc);
-    ic_cdk::println!("RPC call data : {}", format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{{\"from\":\"null\", \"to\":\"{}\", \"data\":\"{}\"}}, \"latest\"],\"id\":1}}", contract_address, data));
+    let state = STATE.with(|s| s.borrow().clone());
+    ic_cdk::println!("EVM RPC is : {}", state.config.rpc_canister);
+    let evm_rpc =
+        candid::types::principal::Principal::from_text(state.config.rpc_canister.clone()).unwrap();
+
+    let rpc_url = match chain {
+        ChainSelection::Mumbai => state.config.rpc_endpoints[0].rpc_url.clone(),
+        ChainSelection::Binance => state.config.rpc_endpoints[1].rpc_url.clone(),
+    };
     let params = (
         &RpcService::Custom(RpcApi {
-            url: "https://polygon-mumbai-pokt.nodies.app".to_string(),
+            url: rpc_url,
             headers: None,
         }), // Ethereum mainnet
         format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{{ \"to\":\"{}\", \"data\":\"{}\"}}, \"latest\"],\"id\":1}}", contract_address, data),
         1000 as u64,
     );
 
-    let evm_rpc = candid::types::principal::Principal::from_text(evm_rpc).unwrap();
+    // let evm_rpc = candid::types::principal::Principal::from_text(evm_rpc).unwrap();
     let (cycles_result,): (Result<u128, RpcError>,) =
         ic_cdk::api::call::call(evm_rpc, "requestCost", params.clone())
             .await
@@ -204,21 +235,21 @@ async fn send_rpc_request(data: String, contract_address: String, evm_rpc: Strin
         Err(err) => ic_cdk::trap(&format!("error in `request` with cycles: {:?}", err)),
     }
 }
-#[ic_cdk::update]
-async fn get_data_from_contract(contract_address: String, evm_rpc: String) -> String {
-    // let state = STATE.with(|s| s.borrow().clone());
+// #[ic_cdk::update]
+// async fn get_data_from_contract(contract_address: String, evm_rpc: String) -> String {
+//     // let state = STATE.with(|s| s.borrow().clone());
 
-    let index = 0;
-    let data = eth_rpc_data::get_data(contract_address.clone(), index).await;
-    if let Ok(res) = data {
-        let request_data = eth_rpc_data::to_hex(&res);
-        ic_cdk::print(&request_data);
-        let rpc_result = send_rpc_request(request_data, contract_address, evm_rpc).await;
-        return rpc_result;
-    }
+//     let index = 0;
+//     let data = eth_rpc_data::get_data(index).await;
+//     if let Ok(res) = data {
+//         let request_data = eth_rpc_data::to_hex(&res);
+//         ic_cdk::print(&request_data);
+//         let rpc_result = send_view_rpc_request(request_data, contract_address).await;
+//         return rpc_result;
+//     }
 
-    return "Error".to_owned();
-}
+//     return "Error".to_owned();
+// }
 
 #[ic_cdk::update]
 async fn send_tx() -> String {
@@ -254,4 +285,16 @@ async fn send_tx() -> String {
     //     return format!("{:?}", e);
     // }
     return "Completed".to_owned();
+}
+
+#[ic_cdk::update]
+async fn get_data_from_source(chain: ChainSelection, contract_address: String) -> String {
+    let data = eth_rpc_data::get_data_with_arguments("get_message", &[]).await;
+    if let Ok(res) = data {
+        let request_data = eth_rpc_data::to_hex(&res);
+        let rpc_result = send_view_rpc_request(request_data, contract_address, chain).await;
+        return rpc_result;
+    }
+
+    return "Error".to_owned();
 }
