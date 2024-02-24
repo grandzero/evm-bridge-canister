@@ -1,5 +1,6 @@
 ///0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97 => Mumbai
 // 0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817 => Binance
+// 0x7BFD4157F0Bbf52d96e278504275a12FB01529Cc => Goerli
 // bd3sg-teaaa-aaaaa-qaaba-cai rpc evm canister
 pub mod ecdsa;
 pub mod eth_rpc_data;
@@ -242,7 +243,10 @@ async fn send_transaction(chain: ChainSelection, message: Vec<u8>) -> Result<Str
     let data_to_sign = eth_rpc_data::get_data_with_arguments("icpCall", &[Token::Bytes(message)])
         .await
         .map_err(|e| format!("Error in get_data_with_arguments: {:?}", e))?;
-    ic_cdk::println!("Data to sign is : {:?}", data_to_sign);
+    ic_cdk::println!(
+        "Data to sign is : {:?}",
+        eth_rpc_data::to_hex(&data_to_sign)
+    );
     let signed_tx = functions::sign_custom_tx(eth_rpc_data::to_hex(&data_to_sign), chain_id).await;
     let tx_result = send_transaction_from_rpc(
         eth_rpc_data::to_hex(&signed_tx.unwrap().sign_tx),

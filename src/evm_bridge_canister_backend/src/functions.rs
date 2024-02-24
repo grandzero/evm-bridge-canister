@@ -150,7 +150,7 @@ pub async fn sign_custom_tx(
 ) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
     let nonce = state.nonce; // TODO: Store nonce for each network and use accordingly
-    let gas_price = U256::from_dec_str("5000000000").unwrap(); // TODO: Use actual gas price from rpc
+    let gas_price = U256::from_dec_str("10000000000").unwrap(); // TODO: Use actual gas price from rpc
     let contract_address = match chain_id {
         80001 => state.config.mumbai_contract.clone(),
         97 => state.config.binance_contract.clone(),

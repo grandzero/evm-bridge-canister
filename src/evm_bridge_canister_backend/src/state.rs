@@ -113,7 +113,7 @@ impl From<Environment> for Config {
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
+                        rpc_url: "https://data-seed-prebsc-1-s1.binance.org:8545".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
@@ -136,7 +136,7 @@ impl From<Environment> for Config {
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
+                        rpc_url: "https://data-seed-prebsc-1-s1.binance.org:8545".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
@@ -159,7 +159,7 @@ impl From<Environment> for Config {
                         rpc_name: "mumbai".to_owned(),
                     },
                     RPCEndpoints {
-                        rpc_url: "https://eth-sepolia.g.alchemy.com/v2/9_z81E1WLPhEG17yVTfdmBuOUrnh-14C".to_owned(),
+                        rpc_url: "https://data-seed-prebsc-1-s1.binance.org:8545".to_owned(),
                         rpc_name: "binance".to_owned(),
                     },
                 ],
