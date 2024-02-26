@@ -44,9 +44,9 @@ The EVM Bridge Canister allows you to perform various operations with ease. Here
 - **Get Gas Price**: Retrieve the current gas price from the specified EVM network. (Using RPC url)
 - **Create Address for Owner**: Generate a new address for the canister owner. This should be called once
 - **Get Canister Address**: Obtain the address associated with the canister.
-- **Sign Example Transaction**: Sign a sample transaction for demonstration purposes.
-- **Interact with EVM Contracts**: Send RPC requests to interact with contracts deployed on EVM-compatible networks.
-- **Get Data From Contract** : Get’s contract data using evm_rpc canister. Contract example is included under contract folder. Expects the contract address and principal of evm_rpc
+- **Get Data From Source**: This functions is used for retrieving data from contracts using evm_rpc canister. It requires contract addresses to be stored in state and chain_id as argument. Chain id can be 97(BSC Testnet) or Mumbai(80001) for now.
+- **RPC Call**: Send RPC requests to interact with contracts deployed on EVM-compatible networks. Functions first parameter should be signed transaction or encoded view function call
+- **Read Mumbai Write Binance** : This function retrieves data from mumbai contract, prepares function call data, signs the data with canisters eth wallet and then sends signed raw transaction using rpc with "eth_sendRawTransaction" method.
 
 ## **Development**
 
@@ -105,6 +105,8 @@ Project's codes can be used for many purposes :
 Example contract has been added under contracts folder.
 
 Since project is created for ICP hackathon, it doesn't include some of the basic functionalities. After refactors and bug fixes, more flexible implementation will be added. Currently it calls one contract from each network but future architecture will allow users to provide their desired functions calls with desired datas using interfaces in solidity.
+
+Canister uses "eth_sendRawTransaction" method for sending transactions using rpc and "eth_call" for getting data from contracts.
 
 # ** Bugs and Refactor Notes **
 
