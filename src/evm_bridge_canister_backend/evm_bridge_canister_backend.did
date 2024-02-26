@@ -1,9 +1,10 @@
-type RPCEndpoints = record {
+type NetworkDetails = record {
+    network_name: text;
     rpc_url: text;
-    rpc_name: text;
+    contract_address: text;
+    chain_id: nat64;
 };
-
-type RPCEndpointList = vec RPCEndpoints;
+type InitArgs = vec NetworkDetails;
 type ChainSelection = variant {
     mumbai;
     binance;
@@ -14,15 +15,15 @@ type Result =
         Err: text;
     };
 
-service : (RPCEndpointList, text) -> {
+service : (InitArgs, text) -> {
     "set_rpc_canister": (text) -> (text);
     "get_gas_price": () -> (text);
     "create_adress_for_owner": () -> (text);
     "get_canister_address" : () -> (text);
     "send_view_rpc_request": (text, ChainSelection, text) -> (text);
-    "send_transaction" : (text, ChainSelection, blob) -> (Result); 
-    "get_data_from_source": (ChainSelection, text) -> (Result);
-    "read_mumbai_write_binance" : (text) -> (Result);
-    "read_binance_write_mumbai" : (text) -> (Result);
+    "get_data_from_source": (nat64) -> (Result);
+    "rpc_call": (text, opt text) -> (text);
+    "read_mumbai_write_binance" : () -> (Result);
+    "read_binance_write_mumbai" : () -> (Result);
     
 }

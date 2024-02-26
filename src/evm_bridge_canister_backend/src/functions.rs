@@ -8,7 +8,7 @@ use ic_cdk::api::management_canister::ecdsa::{EcdsaCurve, SignWithEcdsaArgument}
 use primitive_types::U256;
 use serde::Serialize;
 
-use crate::state::*;
+use crate::bridge_types::*;
 use crate::transaction;
 pub use utils::u64_to_u256;
 use utils::{get_address_from_public_key, get_derivation_path};
@@ -17,43 +17,16 @@ use transaction::*;
 #[derive(CandidType, Serialize, Debug)]
 pub struct CreateAddressResponse {
     pub address: String,
+    pub public_key: Vec<u8>,
 }
 #[derive(CandidType, Deserialize, Debug)]
 pub struct SignTransactionResponse {
     pub sign_tx: Vec<u8>,
 }
-#[derive(CandidType, Deserialize, Debug)]
-pub struct DeployContractResponse {
-    pub tx: Vec<u8>,
-}
-#[derive(CandidType, Deserialize, Debug)]
-pub struct TransferERC20Response {
-    pub tx: Vec<u8>,
-}
-#[derive(CandidType, Deserialize, Debug)]
-pub struct UserResponse {
-    pub address: String,
-    pub transactions: TransactionChainData,
-}
 
-pub fn init() {
-    // if let Some(env) = env_opt {
-    // let env = match env {
-    //     1 => Environment::Development,
-    //     2 => Environment::Staging,
-    //     3 => Environment::Production,
-    //     _ => Environment::Development,
-    // };
-    STATE.with(|s| {
-        let mut state = s.borrow_mut();
-        state.config = Config::from(Environment::Development);
-    })
-    // }
-}
-
-pub async fn get_address(principal_id: Principal) -> String {
+pub async fn get_address() -> String {
     let state = STATE.with(|s| s.borrow().clone());
-    let user = state.users.get(&principal_id).unwrap();
+    let user = state.canister_wallet;
     if let Ok(address) = get_address_from_public_key(user.public_key.clone()) {
         return address;
     }
@@ -63,11 +36,6 @@ pub async fn get_address(principal_id: Principal) -> String {
 
 pub async fn create_address(principal_id: Principal) -> Result<CreateAddressResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
-    let user = state.users.get(&principal_id);
-
-    if let Some(_) = user {
-        return Err("this wallet already exist".to_string());
-    }
 
     let key_id = EcdsaKeyId {
         curve: EcdsaCurve::Secp256k1,
@@ -87,16 +55,16 @@ pub async fn create_address(principal_id: Principal) -> Result<CreateAddressResp
         .map_err(|e| format!("Failed to call ecdsa_public_key {}", e.1))?;
 
     let address = get_address_from_public_key(res.public_key.clone()).unwrap();
-
-    let mut user = UserData::default();
-    user.public_key = res.public_key;
-
     STATE.with(|s| {
         let mut state = s.borrow_mut();
-        state.users.insert(principal_id, user);
+        state.canister_wallet.public_key = res.public_key.clone();
+        state.canister_wallet.public_key_str = address.clone();
     });
 
-    Ok(CreateAddressResponse { address })
+    Ok(CreateAddressResponse {
+        address,
+        public_key: res.public_key,
+    })
 }
 
 pub async fn sign_transaction(
@@ -105,13 +73,7 @@ pub async fn sign_transaction(
     principal_id: Principal,
 ) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
-    let user;
-
-    if let Some(i) = state.users.get(&principal_id) {
-        user = i.clone();
-    } else {
-        return Err("this user does not exist".to_string());
-    }
+    let user = state.canister_wallet.clone();
 
     let mut tx = transaction::get_transaction(&hex_raw_tx, chain_id.clone()).unwrap();
 
@@ -150,21 +112,29 @@ pub async fn sign_custom_tx(
 ) -> Result<SignTransactionResponse, String> {
     let state = STATE.with(|s| s.borrow().clone());
     // let nonce = state.nonce; // TODO: Store nonce for each network and use accordingly
-    let gas_price = U256::from_dec_str("10000000000").unwrap(); // TODO: Use actual gas price from rpc
-    let contract_address = match chain_id {
-        80001 => state.config.mumbai_contract.clone(),
-        97 => state.config.binance_contract.clone(),
-        _ => state.config.binance_contract.clone(),
-    };
-    ic_cdk::println!("legacy: {:?}", contract_address.clone());
+    let gas_price = U256::from_dec_str("2000000000").unwrap(); // TODO: Use actual gas price from rpc
+
+    let contract_address = state
+        .config
+        .network_details_list
+        .iter()
+        .find(|x| x.chain_id == chain_id)
+        .unwrap()
+        .contract_address
+        .clone();
+    let nonce = state
+        .canister_wallet
+        .nonces
+        .iter()
+        .find(|x| x.chain_id == chain_id)
+        .unwrap()
+        .nonce;
+    ic_cdk::println!("contract address: {:?}", contract_address.clone());
+    ic_cdk::println!("nonce: {:?}", nonce);
     ic_cdk::println!("chain_id: {}", chain_id);
     let legacy = transaction::TransactionLegacy {
         chain_id,
-        nonce: match chain_id {
-            80001 => state.nonce.mumbai_nonce,
-            97 => state.nonce.binance_nonce,
-            _ => state.nonce.binance_nonce,
-        }, // TODO: Use actual nonce
+        nonce, // TODO: Use actual nonce
         gas_price: gas_price,
         gas_limit: 1000000,
         to: contract_address,
@@ -180,145 +150,4 @@ pub async fn sign_custom_tx(
     // let raw_tx = tx.serialize().unwrap();
     let res = sign_transaction(raw_tx, chain_id, state.config.owner).await;
     return res;
-}
-
-pub async fn deploy_contract(
-    principal_id: Principal,
-    bytecode: Vec<u8>,
-    chain_id: u64,
-    max_priority_fee_per_gas: U256,
-    gas_limit: u64,
-    max_fee_per_gas: U256,
-) -> Result<DeployContractResponse, String> {
-    let users = STATE.with(|s| s.borrow().users.clone());
-    let user;
-
-    if let Some(i) = users.get(&principal_id) {
-        user = i.clone();
-    } else {
-        return Err("this user does not exist".to_string());
-    }
-
-    let nonce: u64;
-    if let Some(user_transactions) = user.transactions.get(&chain_id) {
-        nonce = user_transactions.nonce;
-    } else {
-        nonce = 0;
-    }
-    let data = "0x".to_owned() + &utils::vec_u8_to_string(&bytecode);
-    let tx = transaction::Transaction1559 {
-        nonce,
-        chain_id,
-        max_priority_fee_per_gas,
-        gas_limit,
-        max_fee_per_gas,
-        to: "0x".to_string(),
-        value: U256::zero(),
-        data,
-        access_list: vec![],
-        v: "0x00".to_string(),
-        r: "0x00".to_string(),
-        s: "0x00".to_string(),
-    };
-
-    let raw_tx = tx.serialize().unwrap();
-    let res = sign_transaction(raw_tx, chain_id, principal_id)
-        .await
-        .unwrap();
-
-    Ok(DeployContractResponse { tx: res.sign_tx })
-}
-
-pub async fn transfer_erc_20(
-    principal_id: Principal,
-    chain_id: u64,
-    max_priority_fee_per_gas: U256,
-    gas_limit: u64,
-    max_fee_per_gas: U256,
-    address: String,
-    value: U256,
-    contract_address: String,
-) -> Result<TransferERC20Response, String> {
-    let users = STATE.with(|s| s.borrow().users.clone());
-    let user;
-
-    if let Some(i) = users.get(&principal_id) {
-        user = i.clone();
-    } else {
-        return Err("this user does not exist".to_string());
-    }
-
-    let nonce: u64;
-    if let Some(user_transactions) = user.transactions.get(&chain_id) {
-        nonce = user_transactions.nonce;
-    } else {
-        nonce = 0;
-    }
-
-    let data = "0x".to_owned() + &utils::get_transfer_data(&address, value).unwrap();
-
-    let tx = transaction::Transaction1559 {
-        nonce,
-        chain_id,
-        max_priority_fee_per_gas,
-        gas_limit,
-        max_fee_per_gas,
-        to: contract_address,
-        value: U256::zero(),
-        data,
-        access_list: vec![],
-        v: "0x00".to_string(),
-        r: "0x00".to_string(),
-        s: "0x00".to_string(),
-    };
-
-    let raw_tx = tx.serialize().unwrap();
-
-    let res = sign_transaction(raw_tx, chain_id, principal_id)
-        .await
-        .unwrap();
-
-    Ok(TransferERC20Response { tx: res.sign_tx })
-}
-
-pub fn get_caller_data(principal_id: Principal, chain_id: u64) -> Option<UserResponse> {
-    let users = STATE.with(|s| s.borrow().users.clone());
-    let user;
-    if let Some(i) = users.get(&principal_id) {
-        user = i.clone();
-    } else {
-        return None;
-    }
-
-    let address = get_address_from_public_key(user.public_key.clone()).unwrap();
-
-    let transaction_data = user
-        .transactions
-        .get(&chain_id)
-        .cloned()
-        .unwrap_or_else(|| TransactionChainData::default());
-
-    Some(UserResponse {
-        address,
-        transactions: transaction_data,
-    })
-}
-
-pub fn clear_caller_history(principal_id: Principal, chain_id: u64) -> Result<(), String> {
-    let users = STATE.with(|s| s.borrow().users.clone());
-
-    if let None = users.get(&principal_id) {
-        return Err("this user does not exist".to_string());
-    }
-
-    STATE.with(|s| {
-        let mut state = s.borrow_mut();
-        let user = state.users.get_mut(&principal_id).unwrap();
-        let user_tx = user.transactions.get_mut(&chain_id);
-        if let Some(user_transactions) = user_tx {
-            user_transactions.transactions.clear();
-        }
-    });
-
-    Ok(())
 }

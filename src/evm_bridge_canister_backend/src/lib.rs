@@ -1,11 +1,11 @@
-///0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97 => Mumbai
-// 0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817 => Binance
+pub mod bridge_types;
+///0x3270934BF219CBD66697DE72fB218A2cC44bBfe9 => Mumbai
+// 0x17E9C819Ea0fd3793a41248fA0724a35CD7Ff8a7 => Binance
 // 0x7BFD4157F0Bbf52d96e278504275a12FB01529Cc => Goerli
 // bd3sg-teaaa-aaaaa-qaaba-cai rpc evm canister
 pub mod ecdsa;
 pub mod eth_rpc_data;
 pub mod functions;
-pub mod state;
 pub mod transaction;
 pub mod utils;
 // use candid::Principal;
@@ -17,21 +17,22 @@ use cketh_common::eth_rpc_client::providers::RpcService;
 
 use ethers_core::abi::Token;
 use primitive_types::U256;
-use state::ChainSelection;
-use state::RPCEndpoints;
-use state::STATE;
+
+use bridge_types::STATE;
 #[ic_cdk::init]
-async fn init(endpoints: Vec<RPCEndpoints>, rpc_canister: String) {
+async fn init(network_details: Vec<bridge_types::NetworkDetails>, rpc_canister: String) {
     STATE.with(|s| {
-        // TODO: Remove hardcoded initiaalization values
         let mut state = s.borrow_mut();
-        state.config.owner = ic_cdk::caller();
-        state.config.rpc_url =
-            "https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr".to_string();
-        state.config.rpc_endpoints = endpoints;
         state.config.rpc_canister = rpc_canister;
-        state.config.mumbai_contract = "0x1d5989e6f450BBd9385Ce98922C0218af4c9aE97".to_string();
-        state.config.binance_contract = "0x4FF62fC53b4fCD08428aE79a59B36A5Ba9235817".to_string();
+        state.config.network_details_list = network_details.clone();
+
+        for network in network_details.iter() {
+            let nonce = bridge_types::Nonce {
+                chain_id: network.chain_id,
+                nonce: 0,
+            };
+            state.canister_wallet.nonces.push(nonce);
+        }
     });
 
     //candid::types::principal::Principal::from_text(rpc_canister).unwrap();
@@ -50,11 +51,21 @@ async fn set_rpc_canister(canister: String) -> String {
 }
 
 #[ic_cdk::update]
-pub async fn get_gas_price() -> String {
+pub async fn get_gas_price(network_name: String) -> Result<String, String> {
     let state = STATE.with(|s| s.borrow().clone());
     let evm_rpc =
         candid::types::principal::Principal::from_text(state.config.rpc_canister).unwrap();
-    let rpc_url = state.config.rpc_url;
+    let rpc_url = state
+        .config
+        .network_details_list
+        .iter()
+        .find(|x| x.network_name == network_name);
+    let rpc_url = match rpc_url {
+        Some(url) => url.rpc_url.clone(),
+        None => {
+            return Err("Network not found".to_string());
+        }
+    };
 
     let params = (
         &RpcService::Custom(RpcApi {
@@ -93,23 +104,15 @@ pub async fn get_gas_price() -> String {
             .unwrap();
     match result {
         Ok(response) => {
-            // Check response structure around gas price
-            // assert_eq!(
-            //     &response[..36],
-            //     "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":\"0x"
-            // );
-            // assert_eq!(&response[response.len() - 2..], "\"}");
-            //let _transaction_hash = &response[36..response.len()];
-
-            return response.to_string();
+            return Ok(response.to_string());
         }
-        Err(err) => ic_cdk::trap(&format!("error in `request` with cycles: {:?}", err)),
+        Err(_) => Err("RPC error occured".to_string()),
     }
 }
 
 #[ic_cdk::update]
 async fn create_adress_for_owner() -> String {
-    let principal_id = ic_cdk::caller();
+    // let principal_id = ic_cdk::caller();
     let state = STATE.with(|s| s.borrow().clone());
     // TODO: Only owner should be able to call this function and it should called once inside init (if possible)
     // if state.config.owner != principal_id {
@@ -121,7 +124,8 @@ async fn create_adress_for_owner() -> String {
         STATE.with(|s| {
             let mut state = s.borrow_mut();
             // state.config.owner_public_key = res.address.to_bytes().clone();
-            state.config.public_key_str = res.address.clone();
+            state.canister_wallet.public_key_str = res.address.clone();
+            state.canister_wallet.public_key = res.public_key.clone();
         });
         return res.address;
     }
@@ -137,59 +141,62 @@ async fn get_canister_address() -> String {
     // ic_cdk::print(&state.owner);
     // let principal_id = Principal::from_text(&state.owner).unwrap();
     // let addr = functions::get_address(state.config.owner).await;
-    let addr = state.config.public_key_str.clone();
+    let addr = state.canister_wallet.public_key_str.clone();
     return addr;
 }
-async fn send_transaction_from_rpc(
-    signed_data: String,
-    chain: ChainSelection,
-    evm_rpc: String,
-) -> String {
-    let state = STATE.with(|s| s.borrow().clone());
-    // TODO: Remove hardcoded chain selection, remove copy paste code
-    let rpc_url = match chain {
-        ChainSelection::Mumbai => state.config.rpc_endpoints[0].rpc_url.clone(),
-        ChainSelection::Binance => state.config.rpc_endpoints[1].rpc_url.clone(),
-    };
-    ic_cdk::println!("RPC URL in send is : {}", rpc_url);
-    let data =  format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendRawTransaction\",\"params\":[\"{}\"],\"id\":1}}",  signed_data);
-    ic_cdk::println!("Data is : {}", data);
 
-    let params = (
-        &RpcService::Custom(RpcApi {
-            url: rpc_url,
-            headers: None,
-        }),
-        data, // Ethereum mainnet
-        1000 as u64,
+async fn send_transaction(chain_id: u64, message: Vec<u8>) -> Result<String, String> {
+    let data_to_sign = eth_rpc_data::get_data_with_arguments("icpCall", &[Token::Bytes(message)])
+        .await
+        .map_err(|e| format!("Error in get_data_with_arguments: {:?}", e))?;
+    ic_cdk::println!(
+        "Data to sign is : {:?}",
+        eth_rpc_data::to_hex(&data_to_sign)
     );
-    // return "Success".to_owned();
-    let evm_rpc = candid::Principal::from_text(evm_rpc).unwrap();
-    let (cycles_result,): (Result<u128, RpcError>,) =
-        ic_cdk::api::call::call(evm_rpc, "requestCost", params.clone())
-            .await
-            .unwrap();
-    let cycles = cycles_result
-        .unwrap_or_else(|e| ic_cdk::trap(&format!("error in `request_cost`: {:?}", e)));
-
-    // Call with expected number of cycles
-    let (result,): (Result<String, RpcError>,) =
-        ic_cdk::api::call::call_with_payment128(evm_rpc, "request", params, cycles)
-            .await
-            .unwrap();
-    match result {
-        Ok(response) => {
-            return response.to_string();
-        }
-        Err(err) => ic_cdk::trap(&format!("error in `request` with cycles: {:?}", err)),
+    let signed_tx = functions::sign_custom_tx(eth_rpc_data::to_hex(&data_to_sign), chain_id).await;
+    // ic_cdk::println!("Signed tx is : {:?}", signed_tx.unwra.clone());
+    let data = eth_rpc_data::to_hex(&signed_tx.unwrap().sign_tx);
+    ic_cdk::println!("Data is : {:?}", data.clone());
+    let tx_result = rpc_call(data, None, chain_id).await;
+    if tx_result.contains("error") {
+        return Err(tx_result);
     }
+    STATE.with(|s| {
+        let mut state = s.borrow_mut();
+        let nonce = state
+            .canister_wallet
+            .nonces
+            .iter_mut()
+            .find(|x| x.chain_id == chain_id)
+            .unwrap();
+        nonce.nonce += 1;
+    });
+
+    return Ok(tx_result);
 }
 
-async fn send_view_rpc_request(
-    data: String,
-    contract_address: String,
-    chain: ChainSelection,
-) -> String {
+#[ic_cdk::update]
+async fn get_data_from_source(chain: u64) -> Result<String, String> {
+    let state = STATE.with(|s| s.borrow().clone());
+    let contract_address = state
+        .config
+        .network_details_list
+        .iter()
+        .find(|x| x.chain_id == chain)
+        .unwrap()
+        .contract_address
+        .clone();
+    let data = eth_rpc_data::get_data_with_arguments("getMessage", &[Token::Uint(U256::from(0))])
+        .await
+        .map_err(|e| format!("Error in get_data_with_arguments: {:?}", e))?;
+    ic_cdk::println!("Data is : {:?}", data);
+    let request_data = eth_rpc_data::to_hex(&data);
+    let rpc_result = rpc_call(request_data, Some(contract_address), chain).await;
+    return Ok(rpc_result);
+}
+
+#[ic_cdk::update]
+async fn rpc_call(data: String, contract_address: Option<String>, chain: u64) -> String {
     // let state = STATE.with(|s| s.borrow().clone());
     ic_cdk::println!("Data in rpc is : {}", data);
     let state = STATE.with(|s| s.borrow().clone());
@@ -197,17 +204,29 @@ async fn send_view_rpc_request(
     let evm_rpc =
         candid::types::principal::Principal::from_text(state.config.rpc_canister.clone()).unwrap();
 
-    let rpc_url = match chain {
-        ChainSelection::Mumbai => state.config.rpc_endpoints[0].rpc_url.clone(),
-        ChainSelection::Binance => state.config.rpc_endpoints[1].rpc_url.clone(),
-    };
+    let rpc_url = state
+        .config
+        .network_details_list
+        .iter()
+        .find(|x| x.chain_id == chain)
+        .unwrap()
+        .rpc_url
+        .clone();
     ic_cdk::println!("RPC URL is : {}", rpc_url);
+    let payload = match contract_address {
+        Some(addr) => {
+            format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{{ \"to\":\"{}\", \"data\":\"{}\"}}, \"latest\"],\"id\":1}}", addr, data)
+        }
+        None => {
+            format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendRawTransaction\",\"params\":[\"{}\"],\"id\":1}}", data)
+        }
+    };
     let params = (
         &RpcService::Custom(RpcApi {
             url: rpc_url,
             headers: None,
         }), // Ethereum mainnet
-        format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{{ \"to\":\"{}\", \"data\":\"{}\"}}, \"latest\"],\"id\":1}}", contract_address, data),
+        payload,
         1000 as u64,
     );
 
@@ -235,64 +254,14 @@ async fn send_view_rpc_request(
 }
 
 #[ic_cdk::update]
-async fn send_transaction(chain: ChainSelection, message: Vec<u8>) -> Result<String, String> {
-    let state = STATE.with(|s| s.borrow_mut().clone());
-    let chain_id = match chain {
-        ChainSelection::Mumbai => {
-            STATE.with(|s| {
-                let mut st = s.borrow_mut().clone();
-                st.nonce.mumbai_nonce += 1
-            });
-
-            80001
-        }
-        ChainSelection::Binance => {
-            STATE.with(|s| {
-                let mut st = s.borrow_mut().clone();
-                st.nonce.binance_nonce += 1
-            });
-            97
-        }
-    };
-    let data_to_sign = eth_rpc_data::get_data_with_arguments("icpCall", &[Token::Bytes(message)])
+async fn read_binance_write_mumbai() -> Result<String, String> {
+    let data_in_mumbai = get_data_from_source(97)
         .await
-        .map_err(|e| format!("Error in get_data_with_arguments: {:?}", e))?;
-    ic_cdk::println!(
-        "Data to sign is : {:?}",
-        eth_rpc_data::to_hex(&data_to_sign)
-    );
-    let signed_tx = functions::sign_custom_tx(eth_rpc_data::to_hex(&data_to_sign), chain_id).await;
-    // ic_cdk::println!("Signed tx is : {:?}", signed_tx.unwra.clone());
-    let data = eth_rpc_data::to_hex(&signed_tx.unwrap().sign_tx);
-    ic_cdk::println!("Data is : {:?}", data.clone());
-    let tx_result = send_transaction_from_rpc(data, chain, state.config.rpc_canister).await;
-
-    return Ok(tx_result);
-}
-
-#[ic_cdk::update]
-async fn get_data_from_source(
-    chain: ChainSelection,
-    contract_address: String,
-) -> Result<String, String> {
-    let data = eth_rpc_data::get_data_with_arguments("getMessage", &[Token::Uint(U256::from(0))])
-        .await
-        .map_err(|e| format!("Error in get_data_with_arguments: {:?}", e))?;
-    ic_cdk::println!("Data is : {:?}", data);
-    let request_data = eth_rpc_data::to_hex(&data);
-    let rpc_result = send_view_rpc_request(request_data, contract_address, chain).await;
-    return Ok(rpc_result);
-}
-
-#[ic_cdk::update]
-async fn read_binance_write_mumbai(contract_address: String) -> Result<String, String> {
-    let data_in_mumbai = get_data_from_source(ChainSelection::Binance, contract_address.clone())
-        .await
-        .map_err(|e| format!("Could not get any data from mumbai"))?;
+        .map_err(|_e| format!("Could not get any data from mumbai"))?;
     let data_result = &data_in_mumbai[34..&data_in_mumbai.len() - 2];
     let vector_data =
         eth_rpc_data::from_hex(data_result).map_err(|e| format!("Error in from_hex: {:?}", e))?;
-    let tx_result = send_transaction(ChainSelection::Mumbai, vector_data)
+    let tx_result = send_transaction(80001, vector_data)
         .await
         .map_err(|e| format!("Error in send_transaction: {:?}", e))?;
 
@@ -300,14 +269,14 @@ async fn read_binance_write_mumbai(contract_address: String) -> Result<String, S
 }
 
 #[ic_cdk::update]
-async fn read_mumbai_write_binance(contract_address: String) -> Result<String, String> {
-    let data_in_mumbai = get_data_from_source(ChainSelection::Mumbai, contract_address.clone())
+async fn read_mumbai_write_binance() -> Result<String, String> {
+    let data_in_mumbai = get_data_from_source(80001)
         .await
-        .map_err(|e| format!("Could not get any data from mumbai"))?;
+        .map_err(|_e| format!("Could not get any data from mumbai"))?;
     let data_result = &data_in_mumbai[34..&data_in_mumbai.len() - 2];
     let vector_data =
         eth_rpc_data::from_hex(data_result).map_err(|e| format!("Error in from_hex: {:?}", e))?;
-    let tx_result = send_transaction(ChainSelection::Binance, vector_data)
+    let tx_result = send_transaction(97, vector_data)
         .await
         .map_err(|e| format!("Error in send_transaction: {:?}", e))?;
 

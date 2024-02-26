@@ -58,7 +58,7 @@ dfx start --background
 
 # Deploy your canisters to the local replica
 dfx deploy evm_rpc --argument '(record { nodesInSubnet = 28 })'
-dfx deploy evm_bridge_canister_backend --argument '("https://polygon-mumbai-pokt.nodies.app")'
+dfx deploy evm_bridge_canister_backend --argument '(vec {record {rpc_url="https://polygon-mumbai.g.alchemy.com/v2/4_fdLBh3p_OwpbYRHzua1BFsJFI4-eNr"; network_name="mumbai"; contract_address="0x3270934BF219CBD66697DE72fB218A2cC44bBfe9"; chain_id=80001 }; record {rpc_url="https://data-seed-prebsc-1-s1.binance.org:8545"; network_name="binance"; contract_address="0x17E9C819Ea0fd3793a41248fA0724a35CD7Ff8a7"; chain_id=97;}}, "bkyz2-fmaaa-aaaaa-qaaaq-cai")'
 ```
 
 ### **Testing**
@@ -77,17 +77,60 @@ Contributions are welcome! If you have suggestions for improvements or encounter
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+# **Usage**
+
+This project is PoC implementation and test for Cross-Chain EVM Wallet with bridge functionality. It currenlt simulates receiving data from EVM contracts and writing data to EVM contracts. Current functions and implementations are not PRODUCTION READY. For demo purposes, only mumbai and binance testnet networks are used. To be able to test the canister below steps should be done :
+
+1. Deploy evm_rpc canister : This canister is used for communication with EVM networks. More data can be found here : https://internetcomputer.org/docs/current/developer-docs/integrations/ethereum/evm-rpc
+2. Deploy canister using deploy.sh : This file contains necessary initialization values like rpc url's, contract addresses etc.
+3. Call set_rpc_canister : This function requires evm_rpc canister's id so that this canister will communicate using this principal with inter-canister calls.
+4. Call create_address_for_owner : This function creates an eth wallet to be able to sign transactions and communicate with EVM networks. This function will be called only by owner of canister in the future but currently anyone can call for poc purposes. It should be called once
+5. Test if all datas successfully created by calling get_canister_address and get_data_from_source functions : get_canister_address should return an evm address. This address is used for signing transactions. And get_data_from_source function requires a chain id which can be either 97 or 80001 for poc purposes. This will return currently saved data on testnet contracts
+6. Fund evm address : To be able to send transaction, make sure canister address is funded in binance testnet network and polygon mumbai network. Small amounts like 0.1 MATIC and 0.1 tBNB should work for provided contracts.
+7. Call read_mumbai_write_binance function : This function reads stored data from mumbai contract and writes it to binance testnet network contract. It requires binance wallet to be funded to be able to send transaction
+8. Call read_binance_write_mumbai function : This function reads stored data from binance testnet contract and writes it to mumbai testnet network contract. It requires mumbai wallet to be funded to be able to send transaction
+
+# **Warning**
+
+This project consists and uses of multiple different projects codes from icp ecosystem. For rpc operations, it uses inter-canister calls with [evm_rpc](https://github.com/nikolas-con/ic-evm-sign/tree/master) canister. Since evm_rpc canister uses [ic-cketh-minter](https://github.com/dfinity/ic) types under dfinity/ic repo, this project also includes it as dependency. For preparing data to be signed, [icp-eth-starter](https://github.com/dfinity/icp-eth-starter) repo has been used and for signing transactions, [ic-evm-sign](https://github.com/nikolas-con/ic-evm-sign/tree/master) repo maintained for latest versions and used in this project. Project is currently under development and more features and fixes will be added. Current version is a simple PoC for getting data from EVM networks and writing data to EVM networks.
+
+Project's codes can be used for many purposes :
+
+1. Cross Chain Decentralized EVM Bridge
+2. Cross Chain Decentralized EVM Wallet
+3. True interoperable decentralized token (with upcoming ICRC-1 token standard) that supports EVM chains
+4. Decentralized BTC <-> EVM Bridge (with upcoming BTC integration)
+5. Decentralized bridge DAO (Created addresses requires funding and it can be funded by a DAO in return of cutting fee for bridge usage)
+
+Example contract has been added under contracts folder.
+
+Since project is created for ICP hackathon, it doesn't include some of the basic functionalities. After refactors and bug fixes, more flexible implementation will be added. Currently it calls one contract from each network but future architecture will allow users to provide their desired functions calls with desired datas using interfaces in solidity.
+
+# ** Bugs and Refactor Notes **
+
+- [x] Remove unused codes from rust files
+- [x] Edit state for better architecture
+- [x] Edit functions and remove copy paste code
+- [x] Persistently fix the nonce issue and use state efficiently
+- [x] Store only necessary data for wallets
+- [ ] Created wallets should be funded before usage
+- [ ] Error handling
+- [ ] Security fixes (Creating address by owner, setting rpc canister)
+- [ ] Key generation for different environments
+- [ ] Serialize json rpc response
+- [ ] Flexible function call across network
+- [ ] Call different addresses securely
+
 ## To Do
 
 - [x] Store canister eth address in state
-- [ ] Add more evm rpc urls
+- [x] Add more evm rpc urls
 - [x] Add function for sending signed transaction
 - [ ] Add token functions for mint and burn
 - [ ] Refactor
-- [ ] Store new rpc url’s in state
 - [ ] Add spawn timer for getting changes on evm contract
-- [ ] Add function to get latest changes on contract
-- [ ] Store processed (cross chain transferred data unique hashes) datas in state
+- [x] Add function to get latest changes on contract
+- [ ] Store processed (cross chain transferred data unique hashes for preventing reply messages consume gas funds) datas in state
 - [ ] Add cross chain token transfer mechanism with mint&burn approach
 - [ ] Allow DAO structure to fund the canister for sending transactions so that dao investors can get fee from each operation
 - [ ] Refactor error handling
